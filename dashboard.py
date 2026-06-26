@@ -137,22 +137,13 @@ st.markdown(
         gap: 12px;
     }}
 
-    /* Container utama pembungkus visual dashboard */
-    .content-container {{
-        background-color: #F8FAFC;
-        padding: 12px;
-        border-radius: 0 0 12px 12px;
-        border: 1px solid {BORDER};
-        margin-bottom: 20px;
-    }}
-
     .stat-row {{
         display: flex;
         flex-direction: row;
         gap: 10px;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
     }}
-    
+
     /* Kartu statistik dengan header warna blok penuh */
     .stat-card {{
         flex: 1;
@@ -163,56 +154,51 @@ st.markdown(
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }}
-    
+
     .stat-card .label {{
         color: white;
         font-size: 11px;
         font-weight: 600;
-        padding: 8px 4px;
+        padding: 6px 4px;
         line-height: 1.2;
-        min-height: 40px;
+        min-height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
     }}
-    
+
     .stat-card .value {{
-        font-size: 26px;
+        font-size: 22px;
         font-weight: 700;
         color: #111827;
-        padding: 12px 4px;
+        padding: 8px 4px;
         line-height: 1;
     }}
 
-    .section-card {{
-        background-color: {SURFACE};
-        border: 1px solid {BORDER};
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    }}
-    
     .section-title {{
         font-weight: 700;
         font-size: 14px;
         color: #111827;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }}
 
-    /* Kontainer bar chart dengan latar belakang teal penuh */
-    .bar-section {{
-        background-color: {TEAL};
+    /* Container kartu pie & bar — pakai st.container(key=...) -> class .st-key-xxx */
+    .st-key-pie_card, .st-key-bar_card {{
         border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 16px;
+        padding: 14px;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }}
+    .st-key-pie_card {{
+        background-color: {SURFACE};
+        border: 1px solid {BORDER};
+    }}
+    .st-key-bar_card {{
+        background-color: {TEAL};
         color: white;
     }}
-    
-    .bar-section .section-title {{
+    .st-key-bar_card .section-title {{
         color: white;
-        font-size: 14px;
-        margin-bottom: 12px;
     }}
 
     /* Tombol refresh bergaya kapsul / capsule modern */
@@ -262,7 +248,18 @@ st.markdown(
         border-color: {BORDER};
     }}
 
-    /* Responsif mobile */
+    /* Reduksi ukuran khusus desktop agar tidak perlu banyak scroll */
+    @media (min-width: 768px) {{
+        .main .block-container {{
+            max-width: 1100px;
+            padding-top: 1rem !important;
+        }}
+        .stat-card .value {{
+            font-size: 24px;
+        }}
+    }}
+
+    /* Responsif mobile (TIDAK DIUBAH) */
     @media (max-width: 640px) {{
         .main .block-container {{
             padding-left: 0.5rem !important;
@@ -288,9 +285,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-# Pembuka kotak konten utama aplikasi
-st.markdown('<div class="content-container">', unsafe_allow_html=True)
 
 # ── LOAD DATA DARI GOOGLE SHEETS ───────────────────
 try:
@@ -336,132 +330,132 @@ try:
             unsafe_allow_html=True,
         )
 
-        # ── 2. Pie Chart: Tingkat Kerusakan Jalan (Legenda Bersih) ──
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">Tingkat Kerusakan Jalan (Pie Chart)</div>', unsafe_allow_html=True)
+        col_pie, col_bar = st.columns(2)
 
-        kerusakan_counts = (
-            df["Kerusakan_norm"].value_counts().reindex(
-                ["Rusak Ringan", "Rusak Sedang", "Rusak Parah"]
-            ).fillna(0).astype(int)
-        )
-        
-        other = df["Kerusakan_norm"][
-            ~df["Kerusakan_norm"].isin(["Rusak Ringan", "Rusak Sedang", "Rusak Parah"])
-        ].value_counts()
-        for k, v in other.items():
-            kerusakan_counts[k] = v
+        # ── 2. Pie Chart: Tingkat Kerusakan Jalan ──
+        with col_pie:
+            with st.container(key="pie_card"):
+                st.markdown('<div class="section-title">Tingkat Kerusakan Jalan (Pie Chart)</div>', unsafe_allow_html=True)
 
-        pie_df = kerusakan_counts.reset_index()
-        pie_df.columns = ["Kategori", "Jumlah"]
-        pie_df = pie_df[pie_df["Jumlah"] > 0]
-
-        color_map = {
-            "Rusak Ringan": COLOR_SELESAI,
-            "Rusak Sedang": COLOR_VERIFIKASI,
-            "Rusak Parah": COLOR_PARAH,
-        }
-
-        if pie_df["Jumlah"].sum() > 0:
-            fig_pie = px.pie(
-                pie_df,
-                names="Kategori",
-                values="Jumlah",
-                color="Kategori",
-                color_discrete_map=color_map,
-                hole=0.0,
-            )
-            fig_pie.update_traces(
-                textinfo="none",  # Menyembunyikan teks di dalam pie agar rapi sesuai mockup
-                hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
-                marker=dict(line=dict(color=SURFACE, width=2)),
-            )
-            fig_pie.update_layout(
-                margin=dict(t=10, b=10, l=10, r=10),
-                height=260,
-                paper_bgcolor=SURFACE,
-                plot_bgcolor=SURFACE,
-                font_color=INK,
-                font_family="Inter",
-                showlegend=True,
-                legend=dict(
-                    orientation="v",
-                    yanchor="middle",
-                    y=0.5,
-                    xanchor="left",
-                    x=1.02,
-                    title=None,
-                ),
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-        else:
-            st.info("Belum ada data tingkat kerusakan.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # ── 3. Bar Chart: Sebaran Kecamatan Jalan Rusak (Teks Putih Terbaca) ──
-        st.markdown('<div class="bar-section">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">Sebaran Lokasi Jalan Rusak (Bar Chart)</div>', unsafe_allow_html=True)
-
-        if "Kecamatan" in df.columns:
-            kecamatan_series = df["Kecamatan"].astype(str).str.strip()
-            kecamatan_series = kecamatan_series[
-                ~kecamatan_series.isin(["", "Tidak diketahui", "Tidak Diketahui", "nan"])
-            ]
-            kecamatan_counts = kecamatan_series.value_counts().head(5).sort_values(ascending=True)
-
-            if len(kecamatan_counts) > 0:
-                bar_df = kecamatan_counts.reset_index()
-                bar_df.columns = ["Kecamatan", "Jumlah"]
-
-                fig_bar = px.bar(
-                    bar_df,
-                    x="Jumlah",
-                    y="Kecamatan",
-                    orientation="h",
-                    text="Jumlah",
+                kerusakan_counts = (
+                    df["Kerusakan_norm"].value_counts().reindex(
+                        ["Rusak Ringan", "Rusak Sedang", "Rusak Parah"]
+                    ).fillna(0).astype(int)
                 )
-                fig_bar.update_traces(
-                    marker_color="white",
-                    marker_line_width=0,
-                    textposition="outside",
-                    textfont_color="white",
-                    cliponaxis=False
-                )
-                fig_bar.update_layout(
-                    plot_bgcolor=TEAL,
-                    paper_bgcolor=TEAL,
-                    font_color="white",
-                    font_family="Inter",
-                    margin=dict(t=10, b=10, l=10, r=40),
-                    height=240,
-                    bargap=0.4,
-                    xaxis=dict(showgrid=False, visible=False, range=[0, bar_df["Jumlah"].max() * 1.2]),
-                    yaxis=dict(
-                        showgrid=False, 
-                        title=None,
-                        tickfont=dict(color="white", size=12, family="Inter") # Memaksa warna teks menjadi putih terang
-                    ),
-                )
-                st.plotly_chart(fig_bar, use_container_width=True)
-            else:
-                st.info("Belum ada data kecamatan yang valid.")
-        else:
-            st.info("Kolom 'Kecamatan' tidak ditemukan di sheet.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+                other = df["Kerusakan_norm"][
+                    ~df["Kerusakan_norm"].isin(["Rusak Ringan", "Rusak Sedang", "Rusak Parah"])
+                ].value_counts()
+                for k, v in other.items():
+                    kerusakan_counts[k] = v
+
+                pie_df = kerusakan_counts.reset_index()
+                pie_df.columns = ["Kategori", "Jumlah"]
+                pie_df = pie_df[pie_df["Jumlah"] > 0]
+
+                color_map = {
+                    "Rusak Ringan": COLOR_SELESAI,
+                    "Rusak Sedang": COLOR_VERIFIKASI,
+                    "Rusak Parah": COLOR_PARAH,
+                }
+
+                if pie_df["Jumlah"].sum() > 0:
+                    fig_pie = px.pie(
+                        pie_df,
+                        names="Kategori",
+                        values="Jumlah",
+                        color="Kategori",
+                        color_discrete_map=color_map,
+                        hole=0.0,
+                    )
+                    fig_pie.update_traces(
+                        textinfo="percent",  # Tampilkan persentase di dalam slice agar tetap kebaca
+                        textposition="inside",
+                        textfont=dict(color="white", size=12, family="Inter"),
+                        hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
+                        marker=dict(line=dict(color=SURFACE, width=2)),
+                    )
+                    fig_pie.update_layout(
+                        margin=dict(t=10, b=50, l=10, r=10),
+                        height=260,
+                        paper_bgcolor=SURFACE,
+                        plot_bgcolor=SURFACE,
+                        font_color=INK,
+                        font_family="Inter",
+                        showlegend=True,
+                        legend=dict(
+                            orientation="h",   # legend horizontal di bawah, biar tidak terpotong di mobile
+                            yanchor="top",
+                            y=-0.12,
+                            xanchor="center",
+                            x=0.5,
+                            title=None,
+                            font=dict(size=11, color=INK),
+                        ),
+                    )
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                else:
+                    st.info("Belum ada data tingkat kerusakan.")
+
+        # ── 3. Bar Chart: Sebaran Kecamatan Jalan Rusak ──
+        with col_bar:
+            with st.container(key="bar_card"):
+                st.markdown('<div class="section-title">Sebaran Lokasi Jalan Rusak (Bar Chart)</div>', unsafe_allow_html=True)
+
+                if "Kecamatan" in df.columns:
+                    kecamatan_series = df["Kecamatan"].astype(str).str.strip()
+                    kecamatan_series = kecamatan_series[
+                        ~kecamatan_series.isin(["", "Tidak diketahui", "Tidak Diketahui", "nan"])
+                    ]
+                    kecamatan_counts = kecamatan_series.value_counts().head(5).sort_values(ascending=True)
+
+                    if len(kecamatan_counts) > 0:
+                        bar_df = kecamatan_counts.reset_index()
+                        bar_df.columns = ["Kecamatan", "Jumlah"]
+
+                        fig_bar = px.bar(
+                            bar_df,
+                            x="Jumlah",
+                            y="Kecamatan",
+                            orientation="h",
+                            text="Jumlah",
+                        )
+                        fig_bar.update_traces(
+                            marker_color="white",
+                            marker_line_width=0,
+                            textposition="outside",
+                            textfont_color="white",
+                            cliponaxis=False
+                        )
+                        fig_bar.update_layout(
+                            plot_bgcolor=TEAL,
+                            paper_bgcolor=TEAL,
+                            font_color="white",
+                            font_family="Inter",
+                            margin=dict(t=10, b=10, l=10, r=40),
+                            height=260,
+                            bargap=0.35,
+                            xaxis=dict(showgrid=False, visible=False, range=[0, bar_df["Jumlah"].max() * 1.2]),
+                            yaxis=dict(
+                                showgrid=False,
+                                title=None,
+                                tickfont=dict(color="white", size=12, family="Inter")  # Memaksa warna teks menjadi putih terang
+                            ),
+                        )
+                        st.plotly_chart(fig_bar, use_container_width=True)
+                    else:
+                        st.info("Belum ada data kecamatan yang valid.")
+                else:
+                    st.info("Kolom 'Kecamatan' tidak ditemukan di sheet.")
 
 except Exception as e:
     st.error(f"❌ Gagal terhubung ke Google Sheets: {e}")
 
-# Penutup kotak konten utama aplikasi
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Informasi metadata berkas di luar pembungkus utama kontainer
+# Informasi metadata berkas
 st.caption(f"Sheet ID: {SHEET_ID} · Terakhir dimuat: {datetime.datetime.now().strftime('%H:%M:%S')}")
 st.write("")
 
-# ── 4. Tombol Aksi Manual Dan Form Input Data Baru ──
+# ── 4. Tombol Aksi Manual ──
 if st.button("🔄 Refresh Sekarang"):
     load_sheet.clear()
     st.rerun()
